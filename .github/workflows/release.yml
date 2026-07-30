@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Sizil — Release Workflow
+#
+# Triggers on any version tag push (e.g. "v1.0.0").
+# Builds a Windows NSIS installer (.exe) on a GitHub-hosted Windows runner
+# and uploads it as a draft GitHub Release.
+#
+# How to release:
+#   1. Bump "version" in tauri.conf.json + Cargo.toml
+#   2. git tag v1.0.0 && git push origin main --tags
+#   3. Wait ~10 minutes for CI to finish
+#   4. Go to github.com/YOU/sizil/releases, add release notes, publish
+# ─────────────────────────────────────────────────────────────────────────────
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+# Only one release can build at a time — cancel any previous in-flight build
+# for the same tag (shouldn't happen, but safe guard).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    name: Build Windows installer
+    runs-on: windows-latest
+    permissions:
+      contents: write   # needed to create/update GitHub Releases
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Rust toolchain ───────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      # ── Cache Rust build artifacts ────────────────────────────────────────
+      - name: Cache Cargo registry + build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      # ── Node / npm ────────────────────────────────────────────────────────
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # ── Tauri build (Windows NSIS) ────────────────────────────────────────
+      - name: Build Sizil
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # If you add a code-signing cert later, set these secrets:
+          # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Sizil ${{ github.ref_name }}"
+          releaseBody: |
+            ## Sizil — Bring order to your project chaos.
+
+            Built by [@Gyandeep09](https://github.com/Gyandeep09)
+
+            ## Install
+            1. Download **Sizil_${{ github.ref_name }}_x64-setup.exe** below
+            2. Run it — Windows may show a SmartScreen warning, click **"More info → Run anyway"**
+            3. Launch Sizil from your Start Menu or Desktop shortcut
+
+            ## Uninstall
+            Control Panel → Programs → Sizil → Uninstall
+          releaseDraft: true
+          prerelease: false
+
