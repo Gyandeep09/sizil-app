@@ -76,7 +76,7 @@ npm run tauri build
 
 ## Author
 
-Made with ❤️ by **[Gyandeep09](https://github.com/Gyandeep09)**
+Made by **[Gyandeep09](https://github.com/Gyandeep09)**
 
 This is an original idea and design — all credit belongs to the author.
 
@@ -84,6 +84,6 @@ This is an original idea and design — all credit belongs to the author.
 
 ## License
 
-Copyright © 2025 Gyandeep09. All Rights Reserved.
+Copyright © 2026 Gyandeep09. All Rights Reserved.
 
 See [LICENSE](LICENSE) for details.
